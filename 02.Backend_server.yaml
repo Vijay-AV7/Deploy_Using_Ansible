@@ -1,0 +1,84 @@
+- name: "Setting up Backend server"
+  hosts: backend
+  become: yes
+  vars_files:
+    - cred.yaml 
+  tasks:
+  - name: "Disabling default nodejs"
+    ansible.builtin.command: dnf module disable nodejs -y
+
+  - name: "Enabling Nodejs version 20"
+    ansible.builtin.command: dnf module enable nodejs:20 -y
+  
+  - name: "Install nodejs package"
+    ansible.builtin.package:
+      name: "{{ item }}"
+      state: present
+    loop:
+      - nodejs
+      - mysql
+
+  - name: "Installing packages"
+    ansible.builtin.pip:
+      name: "{{ item }}"
+      state: present
+      executable: pip3.9
+    loop:
+      - PyMySQL
+      - cryptography
+  
+  - name: "Downloading backend file"
+    ansible.builtin.get_url:
+      url:  https://expense-builds.s3.us-east-1.amazonaws.com/expense-backend-v2.zip
+      dest: /tmp/backend.zip
+  
+  - name: "Creating a directory 'app'"
+    ansible.builtin.file:
+      path: /app
+      state: directory
+  
+  - name: "Install depenceies of package.json"
+    community.general.npm:
+      path: /app
+  
+  - name: "Unzip the backend file"
+    ansible.builtin.unarchive:
+      src: /tmp/backend.zip
+      dest: /app
+      remote_src: yes
+  
+  - name: "Setting up backend service file"
+    ansible.builtin.copy:
+      src: backend_service.yaml
+      dest: /etc/systemd/system/backend.service
+  
+  - name: "starting enabling the systemd service"
+    ansible.builtin.systemd_service:
+      name: backend
+      state: started
+      enabled: yes
+
+  - name: "creating a user"
+    ansible.builtin.user:
+      name: expense
+  
+  - name: " Login for mysql-server"
+    community.mysql.mysql_db:
+      state: import
+      name: all
+      login_user: root
+      login_password: "{{ mysql_rootpasswd }}"
+      login_host: 172.31.22.214
+      target: /app/schema/backend.sql
+
+  - name: "restarting the systemd backend service"
+    ansible.builtin.systemd_service:
+      name: backend
+      enabled: true
+      daemon_reload: true
+      state: restarted
+  
+
+  
+      
+

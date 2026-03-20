@@ -1,0 +1,57 @@
+- name: "Setting up Mysql server"
+  hosts: database
+  become: yes
+  vars_files:
+    - cred.yaml 
+  tasks:
+  - name: "Installing mysql-server"
+    ansible.builtin.package:
+      name: mysql-server
+      state: installed
+  
+  - name: "Installing packages cryptography and PyMySQL"
+    ansible.builtin.pip:
+      name: "{{ item }}"
+      state: present   
+      executable: pip3.9
+    loop:
+      - cryptography
+      - PyMySQL
+  
+  - name: "Starting and enabling the mysql-server"
+    ansible.builtin.service:
+      name: mysqld
+      enabled: yes
+      state: started
+
+  - name: " Login for mysql-server"
+    community.mysql.mysql_info:
+      login_user: root
+      login_password: "{{ mysql_rootpasswd }}"
+      login_host: 172.31.22.214
+    register: mysql_info
+    ignore_errors: true
+
+  - name: setup root password
+    ansible.builtin.command: " mysql_secure_installation --set-root-pass {{ mysql_rootpasswd }} "
+    when: mysql_info.failed is true
+
+  # - name: "Settingup root password for mysql-server"
+  #   community.mysql.mysql_user:
+  #     name: root
+  #     password: "{{ mysql_rootpasswd }}"
+  #     login_user: root
+  #     login_password: "{{ mysql_rootpasswd }}"
+  #     host: "172.31.20.198"
+  #   when: mysql_info.failed is true
+
+  # - name: "Print the ouptput"
+  #   ansible.builtin.debug:
+  #     msg: "{{ mysql_set_root_register }}"
+  
+  # - name: "Setup root password if not set"
+  #   ansible.builtin.command: " mysql_secure_installation --set-root-pass {{ mysql_rootpasswd }} "
+  #   when: mysql_set_root_register.failed is true
+
+
+      

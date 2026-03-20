@@ -1,0 +1,68 @@
+- name: "Settingup frontend server"
+  hosts: frontend
+  become: yes
+  tasks:
+  - name: "Install Nginx"
+    ansible.builtin.package:
+      name: nginx 
+      state: present
+
+  - name: "Start and enable the nginx service"
+    ansible.builtin.service:
+      name: nginx
+      state: started
+      enabled: yes
+
+  - name: delete html directory
+    ansible.builtin.file:
+      path: /usr/share/nginx/html
+      state: absent
+
+  - name: create html directory
+    ansible.builtin.file:
+      path: /usr/share/nginx/html
+      state: directory
+
+  - name: "Downloading frontend files from url"
+    ansible.builtin.get_url:
+      url: https://expense-builds.s3.us-east-1.amazonaws.com/expense-frontend-v2.zip
+      dest: /tmp/frontend.zip
+
+  - name: "Unzipping in Nginx HTML directory"
+    ansible.builtin.unarchive:
+      src: /tmp/frontend.zip
+      dest: /usr/share/nginx/html
+      remote_src: yes
+  
+  - name: "fetching the backend"
+    ansible.builtin.copy:
+      src: backend.conf
+      dest: /etc/nginx/default.d/expense.conf
+  
+  - name: "Start and enable the nginx service"
+    ansible.builtin.service:
+      name: nginx
+      daemon_reload: true
+      enabled: yes
+      state: restarted
+  
+  
+      
+      
+
+
+
+  # Deleting files from folder 
+  # - name: "deleting the default html page in Nginx" 
+  #   ansible.builtin.find:
+  #     paths: /usr/share/nginx/html
+  #     file_type: file
+  #     register: files_to_delete
+
+  # - name: Delete found files
+  #   ansible.builtin.file:
+  #     path: "{{ item.path }}"
+  #     state: absent
+  #     loop: "{{ files_to_delete.files }}" 
+
+
