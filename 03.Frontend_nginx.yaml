@@ -34,11 +34,14 @@
       dest: /usr/share/nginx/html
       remote_src: yes
   
-  - name: "fetching the backend"
+  - name: "Reverse proxy configuration"
     ansible.builtin.copy:
       src: backend.conf
       dest: /etc/nginx/default.d/expense.conf
+    notify:
+      - Start and enable the nginx service
   
+  handlers:
   - name: "Start and enable the nginx service"
     ansible.builtin.service:
       name: nginx
